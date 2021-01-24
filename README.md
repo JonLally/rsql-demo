@@ -1,4 +1,4 @@
-### RSQL example
+### Spring Data REST RSQL example
 
 The goal of this project is to find a way to use RSQL alongside Spring Data REST and compliment the findAll (GET /{repository}) with some of the JpaSpecificationExecutor methods. Possibly the best description of what this demo does can be found in the [tests](src/test/java/com/jonl/rsql/rsqldemo/RsqlDemoApplicationTests.java). 
 

@@ -5,6 +5,8 @@ import java.util.stream.Collectors;
 
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Path;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
@@ -29,19 +31,19 @@ public class RSQLSpecification<T> implements Specification<T> {
     switch (RSQLSearchOperation.getSimpleOperator(operator)) {
       case EQUAL:
         if (argument instanceof String) {
-          return builder.like(root.get(property), argument.toString().replace('*', '%'));
+          return builder.like(getAbsolutePath(root, property), argument.toString().replace('*', '%'));
         } else if (argument == null) {
-          return builder.isNull(root.get(property));
+          return builder.isNull(getAbsolutePath(root, property));
         } else {
-          return builder.equal(root.get(property), argument);
+          return builder.equal(getAbsolutePath(root, property), argument);
         }
       case NOT_EQUAL:
         if (argument instanceof String) {
           return builder.notLike(root.<String>get(property), argument.toString().replace('*', '%'));
         } else if (argument == null) {
-          return builder.isNotNull(root.get(property));
+          return builder.isNotNull(getAbsolutePath(root, property));
         } else {
-          return builder.notEqual(root.get(property), argument);
+          return builder.notEqual(getAbsolutePath(root, property), argument);
         }
       case GREATER_THAN:
         return builder.greaterThan(root.<String>get(property), argument.toString());
@@ -52,16 +54,29 @@ public class RSQLSpecification<T> implements Specification<T> {
       case LESS_THAN_OR_EQUAL:
         return builder.lessThanOrEqualTo(root.<String>get(property), argument.toString());
       case IN:
-        return root.get(property).in(args);
+        return getAbsolutePath(root, property).in(args);
       case NOT_IN:
-        return builder.not(root.get(property).in(args));
+        return builder.not(getAbsolutePath(root, property).in(args));
       default:
         return null;
     }
   }
 
+  /**
+   * Handles embedded classes and IDs where they must be specified by their field
+   * name in the root and then their field name in the embedded class spearated
+   * with ".".
+   */
+  private Path<String> getAbsolutePath(final Path<?> path, final String property) {
+    if (property.contains(".")) {
+      return getAbsolutePath(path.get(property.substring(0, property.indexOf("."))),
+          property.substring(property.indexOf(".") + 1));
+    }
+    return path.get(property);
+  }
+
   private List<Object> castArguments(final Root<T> root) {
-    Class<? extends Object> type = root.get(property).getJavaType();
+    Class<? extends Object> type = getAbsolutePath(root, property).getJavaType();
     return arguments.stream().map(arg -> {
       if (type.equals(Integer.class)) {
         return Integer.parseInt(arg);
